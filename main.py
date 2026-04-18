@@ -6,7 +6,7 @@ import tempfile
 import pytz
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import TELEGRAM_TOKEN, TIMEZONE
@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 ALMATY_TZ = pytz.timezone(TIMEZONE)
+
+MAIN_KEYBOARD = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📊 Баланс"), KeyboardButton(text="📅 Неделя")],
+        [KeyboardButton(text="🗓 Месяц"), KeyboardButton(text="↩️ Отмена")],
+    ],
+    resize_keyboard=True,
+    input_field_placeholder="Напиши о трате или доходе..."
+)
 
 START_TEXT = (
     "👋 Привет! Я твой личный финансист.\n\n"
@@ -40,34 +49,38 @@ START_TEXT = (
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
-    await message.answer(START_TEXT, parse_mode="Markdown")
+    await message.answer(START_TEXT, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
 @dp.message(Command("баланс"))
+@dp.message(F.text == "📊 Баланс")
 async def cmd_balance(message: Message):
     report = format_daily_report(message.from_user.id)
-    await message.answer(report, parse_mode="Markdown")
+    await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
 @dp.message(Command("неделя"))
+@dp.message(F.text == "📅 Неделя")
 async def cmd_week(message: Message):
     report = format_week_report(message.from_user.id)
-    await message.answer(report, parse_mode="Markdown")
+    await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
 @dp.message(Command("месяц"))
+@dp.message(F.text == "🗓 Месяц")
 async def cmd_month(message: Message):
     report = format_monthly_report(message.from_user.id)
-    await message.answer(report, parse_mode="Markdown")
+    await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
 @dp.message(Command("отмена"))
+@dp.message(F.text == "↩️ Отмена")
 async def cmd_undo(message: Message):
     success = undo_last_transaction(message.from_user.id)
     if success:
-        await message.answer("↩️ Последняя запись отменена.")
+        await message.answer("↩️ Последняя запись отменена.", reply_markup=MAIN_KEYBOARD)
     else:
-        await message.answer("Записей не найдено.")
+        await message.answer("Записей не найдено.", reply_markup=MAIN_KEYBOARD)
 
 
 @dp.message(F.voice)
@@ -93,7 +106,9 @@ async def handle_voice(message: Message):
         os.unlink(tmp_path)
 
 
-@dp.message(F.text & ~F.text.startswith("/"))
+BUTTON_TEXTS = {"📊 Баланс", "📅 Неделя", "🗓 Месяц", "↩️ Отмена"}
+
+@dp.message(F.text & ~F.text.startswith("/") & ~F.text.in_(BUTTON_TEXTS))
 async def handle_text(message: Message):
     try:
         result = classify_transaction(message.text)
