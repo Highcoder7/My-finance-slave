@@ -5,7 +5,7 @@ import tempfile
 
 import pytz
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command
+from aiogram.filters import Command, or_f
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -52,29 +52,25 @@ async def cmd_start(message: Message):
     await message.answer(START_TEXT, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(Command("баланс"))
-@dp.message(F.text == "📊 Баланс")
+@dp.message(or_f(Command("баланс"), F.text == "📊 Баланс"))
 async def cmd_balance(message: Message):
     report = format_daily_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(Command("неделя"))
-@dp.message(F.text == "📅 Неделя")
+@dp.message(or_f(Command("неделя"), F.text == "📅 Неделя"))
 async def cmd_week(message: Message):
     report = format_week_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(Command("месяц"))
-@dp.message(F.text == "🗓 Месяц")
+@dp.message(or_f(Command("месяц"), F.text == "🗓 Месяц"))
 async def cmd_month(message: Message):
     report = format_monthly_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(Command("отмена"))
-@dp.message(F.text == "↩️ Отмена")
+@dp.message(or_f(Command("отмена"), F.text == "↩️ Отмена"))
 async def cmd_undo(message: Message):
     success = undo_last_transaction(message.from_user.id)
     if success:
