@@ -5,7 +5,7 @@ import tempfile
 
 import pytz
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command, or_f
+from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -52,25 +52,25 @@ async def cmd_start(message: Message):
     await message.answer(START_TEXT, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(or_f(Command("баланс"), F.text == "📊 Баланс"))
+@dp.message(Command("баланс"))
 async def cmd_balance(message: Message):
     report = format_daily_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(or_f(Command("неделя"), F.text == "📅 Неделя"))
+@dp.message(Command("неделя"))
 async def cmd_week(message: Message):
     report = format_week_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(or_f(Command("месяц"), F.text == "🗓 Месяц"))
+@dp.message(Command("месяц"))
 async def cmd_month(message: Message):
     report = format_monthly_report(message.from_user.id)
     await message.answer(report, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)
 
 
-@dp.message(or_f(Command("отмена"), F.text == "↩️ Отмена"))
+@dp.message(Command("отмена"))
 async def cmd_undo(message: Message):
     success = undo_last_transaction(message.from_user.id)
     if success:
@@ -102,12 +102,26 @@ async def handle_voice(message: Message):
         os.unlink(tmp_path)
 
 
-BUTTON_TEXTS = {"📊 Баланс", "📅 Неделя", "🗓 Месяц", "↩️ Отмена"}
-
-@dp.message(F.text & ~F.text.startswith("/") & ~F.text.in_(BUTTON_TEXTS))
+@dp.message(F.text & ~F.text.startswith("/"))
 async def handle_text(message: Message):
+    text = message.text.strip()
+
+    # Обработка кнопок клавиатуры
+    if "Баланс" in text:
+        await cmd_balance(message)
+        return
+    if "Неделя" in text:
+        await cmd_week(message)
+        return
+    if "Месяц" in text:
+        await cmd_month(message)
+        return
+    if "Отмена" in text:
+        await cmd_undo(message)
+        return
+
     try:
-        result = classify_transaction(message.text)
+        result = classify_transaction(text)
         await process_classification(message, result)
     except Exception as e:
         logger.error(f"Classification error: {e}", exc_info=True)
