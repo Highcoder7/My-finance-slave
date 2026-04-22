@@ -1,8 +1,11 @@
 import anthropic
 import json
-from config import ANTHROPIC_API_KEY
+import os
+from dotenv import load_dotenv
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 SYSTEM_PROMPT = """Ты финансовый классификатор. Пользователь пишет о своих тратах или доходах на русском языке.
 Извлеки из текста:
@@ -20,6 +23,7 @@ SYSTEM_PROMPT = """Ты финансовый классификатор. Пол�
 
 
 def classify_transaction(text: str) -> dict:
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=200,
